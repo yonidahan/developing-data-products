@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DiamondEstim</title>
+  <meta charset="utf-8">
+  <meta name="description" content="DiamondEstim">
+  <meta name="author" content="Yoni DAHAN">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  <link rel=stylesheet href="./assets/css/ribbons.css"></link>
+
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>DiamondEstim</h1>
+    <h2>Developing Data Products - course project</h2>
+    <p>Yoni DAHAN<br/></p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h2>DiamondEstim</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>Allows you to estimate the value of your diamond.
+Given your stone&#39;s characteristics :   </p>
+
+<ul>
+<li>weight (carat)</li>
+<li>clarity (I1, SI2, SI1, VS2, VS1, VVS2, VVS1, IF)<br></li>
+<li>color (D, E, F, G, H)</li>
+<li>cut (fair, good, very good, premium, ideal),</li>
+</ul>
+
+<p>DiamondEstim produces an estimated value in USD.</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-2" style="background:;">
+  <hgroup>
+    <h2>Algorithm</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>DiamondEstim uses the <em>diamonds</em> data that comes with the R package &quot;ggplot2&quot;.   </p>
+
+<p>This data contains the prices and other characteristics of no less than 54,000 round cut diamonds.   </p>
+
+<p>A regression model is built with :   </p>
+
+<ul>
+<li>price as response<br></li>
+<li>weight, color, clarity and cut as predictors</li>
+</ul>
+
+<p>It has a root mean squared error of about USD14.</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-3" style="background:;">
+  <hgroup>
+    <h2>Model Selection</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">library(caret);library(ggplot2);data(diamonds)   
+</code></pre>
+
+<pre><code>## Loading required package: lattice
+## Loading required package: ggplot2
+</code></pre>
+
+<pre><code class="r">intrain&lt;-createDataPartition(y=diamonds$price,p=0.7,list=F)
+training&lt;-diamonds[intrain,];testing&lt;-diamonds[-intrain,]   
+
+##Preprocessing
+preproc&lt;-preProcess(x=training[,-c(2,3,4,7)],
+                    method=c(&quot;BoxCox&quot;,&quot;center&quot;,&quot;scale&quot;)) 
+training1&lt;-predict(preproc,training[,-c(2,3,4,7)])
+testing1&lt;-predict(preproc,testing[,-c(2,3,4,7)])
+
+training1&lt;-cbind(training1,training[,c(2,3,4,7)])
+testing1&lt;-cbind(testing1,testing[,c(2,3,4,7)])
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-4" style="background:;">
+  <hgroup>
+    <h2>Model Selection - Continued</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">##Models
+lm_all&lt;-lm(data=training1,price~.)
+lm_simple&lt;-lm(data=training1,price~carat+color+clarity)
+lm_yo&lt;-lm(data=training1,price~color+carat+clarity+cut)
+lasso&lt;-train(data=training1,price~.,method=&quot;lasso&quot;)
+lm_step&lt;-step(lm_all)
+</code></pre>
+
+<pre><code>## Start:  AIC=550812.7
+## price ~ carat + depth + table + x + y + z + cut + color + clarity
+## 
+##           Df  Sum of Sq        RSS    AIC
+## &lt;none&gt;                  8.1616e+10 550813
+## - z        1 5.0133e+07 8.1666e+10 550834
+## - table    1 1.3030e+08 8.1747e+10 550871
+## - y        1 2.2004e+08 8.1836e+10 550912
+## - cut      4 9.4691e+08 8.2563e+10 551240
+## - depth    1 3.3469e+09 8.4963e+10 552328
+## - color    6 8.2755e+09 8.9892e+10 554447
+## - carat    1 1.4884e+10 9.6500e+10 557136
+## - x        1 2.2466e+10 1.0408e+11 559992
+## - clarity  7 2.3964e+10 1.0558e+11 560520
+</code></pre>
+
+<pre><code class="r">##Predict on testing set
+testing_step&lt;-predict(lm_step,testing1)
+testing_yo&lt;-predict(lm_yo,testing1)
+testing_simple&lt;-predict(lm_simple,testing1)
+testing_lasso&lt;-predict(lasso,testing1)
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-5" style="background:;">
+  <hgroup>
+    <h2>Model Selection - Root Mean Squared Errors</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">##Get the Root Mean Squared Errors on testing set
+rmse_step&lt;-trunc((sqrt(sum((testing1$price-testing_step)^2)))/
+        (length(testing1$price)))
+rmse_yo&lt;-trunc((sqrt(sum((testing1$price-testing_yo)^2)))/
+        (length(testing1$price)))
+rmse_simple&lt;-trunc((sqrt(sum((testing1$price-testing_simple)^2)))/
+        (length(testing1$price)))
+rmse_lasso&lt;-trunc((sqrt(sum((testing1$price-testing_lasso)^2)))/
+        (length(testing1$price)))
+
+rmse&lt;-data.frame(rmse_step,rmse_yo,rmse_simple,rmse_lasso)
+
+rmse
+</code></pre>
+
+<pre><code>##   rmse_step rmse_yo rmse_simple rmse_lasso
+## 1        11      14          14         12
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-6" style="background:;">
+  <hgroup>
+    <h2>Front-end</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>In the left side of the page, DiamondEstim asks you to provide the following :   </p>
+
+<ul>
+<li><p>weight (from 0.5 to 5ct) ; using a field to enter numbers   </p>
+
+<p>and:</p></li>
+<li><p>color, clarity, cut ; using boxes with choices to select from   </p></li>
+</ul>
+
+<p>In the right side is showed :   </p>
+
+<ul>
+<li>a summary of the stone&#39;s characteristics<br></li>
+<li>an estimated value in USD<br></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-7" style="background:;">
+  <article data-timings="">
+    <p><img src="C:/Users/Sarah/Desktop/Data%20Science/Data%20Science%20Specialization/Developing%20Data%20Products/courseproject/diamondestim.png" alt="alt text" title="Diamond Estim"></p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-8" style="background:;">
+  <hgroup>
+    <h2>Information</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>DiamondEstim is available here : <a href="https://yonidahan.shinyapps.io/courseproject_app/">https://yonidahan.shinyapps.io/courseproject_app/</a>   </p>
+
+<p>For any information or documentation :   </p>
+
+<ul>
+<li><p><a href="mailto:dahan.yoni1@gmail.com">dahan.yoni1@gmail.com</a>   </p></li>
+<li><p><a href="https://yonidahan.shinyapps.io/courseproject_doc/"> https://yonidahan.shinyapps.io/courseproject_doc/</a></p></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='DiamondEstim'>
+         1
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=2 title='Algorithm'>
+         2
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=3 title='Model Selection'>
+         3
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=4 title='Model Selection - Continued'>
+         4
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=5 title='Model Selection - Root Mean Squared Errors'>
+         5
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=6 title='Front-end'>
+         6
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=7 title=''>
+         7
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=8 title='Information'>
+         8
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>
