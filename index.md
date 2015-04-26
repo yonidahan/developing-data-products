@@ -37,16 +37,27 @@ It has a root mean squared error of about USD14.4
 
 
 --- 
-## Price regarding carat and clarity   
+## Price regarding clarity and color  
 
 
 ```r
-library(caret);library(ggplot2);data(diamonds)   
-
-qplot(data=diamonds,carat,price,color=clarity)
+library(caret);library(dplyr);data(diamonds)   
+summarise(group_by(diamonds,clarity),mean(price))
 ```
 
-![plot of chunk unnamed-chunk-1](assets/fig/unnamed-chunk-1-1.png) 
+```
+## Source: local data frame [8 x 2]
+## 
+##   clarity mean(price)
+## 1      I1    3924.169
+## 2     SI2    5063.029
+## 3     SI1    3996.001
+## 4     VS2    3924.989
+## 5     VS1    3839.455
+## 6    VVS2    3283.737
+## 7    VVS1    2523.115
+## 8      IF    2864.839
+```
 
 ---
 
